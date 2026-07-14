@@ -22,17 +22,50 @@ app.get("/api/ping", (req, res) => {
 // 2. Music Search Endpoint
 app.get("/api/search", async (req, res) => {
   const query = req.query.q as string;
+  const type = req.query.type as string || "songs";
+
   if (!query) {
     res.status(400).json({ error: "Missing query parameter 'q'" });
     return;
   }
 
   try {
+    if (type === "artists") {
+      const artists = await searchArtistsRobust(query);
+      res.json({ items: artists });
+      return;
+    }
+
+    if (type === "playlists") {
+      const playlists = await searchPlaylistsRobust(query);
+      res.json({ items: playlists });
+      return;
+    }
+
+    if (type === "albums") {
+      const albums = await searchAlbumsRobust(query);
+      res.json({ items: albums });
+      return;
+    }
+
+    if (type === "videos") {
+      const videos = await searchVideosRobust(query);
+      res.json({ items: videos });
+      return;
+    }
+
+    if (type === "live") {
+      const liveSongs = await searchSongsRobust(query);
+      res.json({ items: liveSongs });
+      return;
+    }
+
+    // Default: songs
     const songs = await searchSongsRobust(query);
     res.json(songs);
   } catch (error: any) {
-    console.error(`[Express] Search error for query "${query}":`, error);
-    res.status(500).json({ error: error.message || "Failed to search songs" });
+    console.error(`[Express] Search error for query "${query}" and type "${type}":`, error);
+    res.status(500).json({ error: error.message || "Failed to search" });
   }
 });
 
