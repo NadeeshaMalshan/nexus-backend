@@ -1,15 +1,14 @@
-import type { Innertube } from "youtubei.js";
 import { AudioLogger } from "./logger";
 import { YouTubeResolverError } from "./errors";
 
 export class YouTubeiClient {
-  private static instance: Innertube | null = null;
-  private static initPromise: Promise<Innertube> | null = null;
+  private static instance: any = null;
+  private static initPromise: Promise<any> | null = null;
 
   /**
    * Returns the initialized Innertube client singleton instance.
    */
-  static async getInstance(): Promise<Innertube> {
+  static async getInstance(): Promise<any> {
     if (this.instance) {
       return this.instance;
     }
