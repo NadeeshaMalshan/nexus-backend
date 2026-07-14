@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { searchSongsRobust, searchVideosRobust, searchAlbumsRobust, searchArtistsRobust, searchPlaylistsRobust } from "./lib/ytmSearchService";
-import { getYoutubeDirectAudioUrl } from "./lib/youtubeDirectAudioUrl";
+import { getYoutubeDirectAudioUrl } from "./lib/audio/resolver";
 import { getRelatedTracksRobust } from "./lib/youtubeMusicRelated";
 import axios from "axios";
 
