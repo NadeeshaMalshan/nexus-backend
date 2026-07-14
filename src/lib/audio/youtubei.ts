@@ -17,7 +17,7 @@ export class YouTubeiClient {
       AudioLogger.info("YouTube", "Initializing Innertube client singleton...");
       this.initPromise = (async () => {
         try {
-          const { Innertube, UniversalCache } = await import("youtubei.js");
+          const { Innertube, UniversalCache } = await (new Function('return import("youtubei.js")')() as Promise<any>);
           const client = await Innertube.create({
             cache: new UniversalCache(false)
           });
