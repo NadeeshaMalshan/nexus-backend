@@ -6,6 +6,24 @@ import { AudioLogger } from "./logger";
 import { AudioResolveError } from "./errors";
 
 /**
+ * Helper to wrap a promise in a timeout.
+ */
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, name: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${name} resolution timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  });
+}
+
+/**
  * Resolves a direct audio stream URL for a YouTube video.
  * Uses a tiered strategy:
  * 1. Redis Cache lookup
@@ -37,21 +55,29 @@ export async function getYoutubeDirectAudioUrl(
   let resolvedUrl: string | null = null;
   const errors: Error[] = [];
 
-  // 2. Try youtubei.js (Primary)
+  // 2. Try youtubei.js (Primary) with a 3.5s timeout
   try {
-    resolvedUrl = await YouTubeiClient.resolveStream(videoId);
+    resolvedUrl = await withTimeout(
+      YouTubeiClient.resolveStream(videoId),
+      3500,
+      "youtubei.js"
+    );
   } catch (err: any) {
     errors.push(err);
-    AudioLogger.warn("YouTube", `youtubei.js resolver failed for ${videoId}. Trying fallback ytdl-core...`);
+    AudioLogger.warn("YouTube", `youtubei.js resolver failed/timed out for ${videoId}. Trying fallback ytdl-core...`);
   }
 
-  // 3. Try @distube/ytdl-core (Secondary fallback)
+  // 3. Try @distube/ytdl-core (Secondary fallback) with a 3.5s timeout
   if (!resolvedUrl) {
     try {
-      resolvedUrl = await resolveYtdlStream(videoId);
+      resolvedUrl = await withTimeout(
+        resolveYtdlStream(videoId),
+        3500,
+        "ytdl-core"
+      );
     } catch (err: any) {
       errors.push(err);
-      AudioLogger.warn("ytdl-core", `ytdl-core fallback failed for ${videoId}. Trying fallback Piped...`);
+      AudioLogger.warn("ytdl-core", `ytdl-core fallback failed/timed out for ${videoId}. Trying fallback Piped...`);
     }
   }
 
