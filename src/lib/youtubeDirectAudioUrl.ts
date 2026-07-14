@@ -139,27 +139,38 @@ export async function getPipedAudioUrl(videoId: string): Promise<string | null> 
   const raw = process.env.PIPED_API_BASE_URL?.trim();
   if (raw?.toLowerCase() === "off" || raw === "0") return null;
 
-  const base = (raw || "https://pipedapi.kavin.rocks").replace(/\/+$/, "");
+  const bases = raw
+    ? [raw.replace(/\/+$/, "")]
+    : [
+        "https://pipedapi.projectsegfau.lt",
+        "https://pipedapi.swish.moe",
+        "https://pipedapi.sugoi.host",
+        "https://piped-api.kuoushi.com",
+        "https://pipedapi.kavin.rocks"
+      ];
 
-  try {
-    const response = await axios.get<PipedStreamsResponse>(`${base}/streams/${encodeURIComponent(videoId)}`, {
-      timeout: 15000,
-      headers: {
-        Accept: "application/json",
-        "User-Agent": CHROME_UA,
-      },
-    });
+  for (const base of bases) {
+    try {
+      const response = await axios.get<PipedStreamsResponse>(`${base}/streams/${encodeURIComponent(videoId)}`, {
+        timeout: 6000,
+        headers: {
+          Accept: "application/json",
+          "User-Agent": CHROME_UA,
+        },
+      });
 
-    const streams = response.data?.audioStreams;
-    if (!Array.isArray(streams) || streams.length === 0) return null;
+      const streams = response.data?.audioStreams;
+      if (!Array.isArray(streams) || streams.length === 0) continue;
 
-    const withUrl = streams.filter((s): s is typeof s & { url: string } => typeof s.url === "string" && s.url.length > 0);
-    if (withUrl.length === 0) return null;
+      const withUrl = streams.filter((s): s is typeof s & { url: string } => typeof s.url === "string" && s.url.length > 0);
+      if (withUrl.length === 0) continue;
 
-    withUrl.sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0));
-    return withUrl[0].url;
-  } catch (e) {
-    console.warn("[youtubeDirectAudioUrl] Piped:", e instanceof Error ? e.message : e);
-    return null;
+      withUrl.sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0));
+      console.log(`[youtubeDirectAudioUrl] Got stream URL from Piped instance: ${base}`);
+      return withUrl[0].url;
+    } catch (e) {
+      console.warn(`[youtubeDirectAudioUrl] Piped instance ${base} failed:`, e instanceof Error ? e.message : e);
+    }
   }
+  return null;
 }
