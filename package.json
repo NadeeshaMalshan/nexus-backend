@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "Dedicated API backend for Nexus Music mobile client",
   "main": "dist/server.js",
+  "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "nodemon src/server.ts"
+    "start": "node --experimental-specifier-resolution=node dist/server.js",
+    "dev": "nodemon --exec node --experimental-specifier-resolution=node --loader ts-node/esm src/server.ts"
   },
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
