@@ -92,6 +92,29 @@ app.get("/api/get-audio-url", async (req, res) => {
   }
 });
 
+// 3.5. Audio Stream Redirect Endpoint (for Expo AV / react-native player compatibility)
+app.get("/api/audio/stream", async (req, res) => {
+  const videoId = req.query.videoId as string;
+  const isLive = req.query.isLive === "true";
+
+  if (!videoId) {
+    res.status(400).json({ error: "Missing parameter 'videoId'" });
+    return;
+  }
+
+  try {
+    const url = await getYoutubeDirectAudioUrl(videoId, isLive);
+    if (!url) {
+      res.status(404).json({ error: "Direct audio stream URL not found" });
+      return;
+    }
+    res.redirect(307, url);
+  } catch (error: any) {
+    console.error(`[Express] Audio redirect failed for video ${videoId}:`, error);
+    res.status(500).json({ error: error.message || "Redirect failed" });
+  }
+});
+
 // 4. SSE AI Recommendations Endpoint
 app.post("/api/recommendations", async (req, res) => {
   const { prompt, recentTrackId } = req.body;
