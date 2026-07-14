@@ -1,34 +1,35 @@
-import { Innertube, UniversalCache } from "youtubei.js";
 import { AudioLogger } from "./logger";
 import { YouTubeResolverError } from "./errors";
 
 export class YouTubeiClient {
-  private static instance: Innertube | null = null;
-  private static initPromise: Promise<Innertube> | null = null;
+  private static instance: any = null;
+  private static initPromise: Promise<any> | null = null;
 
   /**
    * Returns the initialized Innertube client singleton instance.
    */
-  static async getInstance(): Promise<Innertube> {
+  static async getInstance(): Promise<any> {
     if (this.instance) {
       return this.instance;
     }
 
     if (!this.initPromise) {
       AudioLogger.info("YouTube", "Initializing Innertube client singleton...");
-      this.initPromise = Innertube.create({
-        cache: new UniversalCache(false)
-      })
-        .then((client) => {
+      this.initPromise = (async () => {
+        try {
+          const { Innertube, UniversalCache } = await (new Function('return import("youtubei.js")')() as Promise<any>);
+          const client = await Innertube.create({
+            cache: new UniversalCache(false)
+          });
           this.instance = client;
           AudioLogger.info("YouTube", "Innertube client singleton initialized successfully");
           return client;
-        })
-        .catch((err) => {
+        } catch (err: any) {
           this.initPromise = null;
           AudioLogger.error("YouTube", "Failed to initialize Innertube client", err);
           throw new YouTubeResolverError("Failed to initialize youtubei.js client", err);
-        });
+        }
+      })();
     }
 
     return this.initPromise;
