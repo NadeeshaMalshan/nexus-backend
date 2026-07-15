@@ -11,17 +11,32 @@ import { AudioResolveError } from "./errors";
  */
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, name: string): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
+  let settled = false;
+
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      reject(new Error(`${name} resolution timed out after ${timeoutMs}ms`));
+      if (!settled) {
+        settled = true;
+        reject(new Error(`${name} resolution timed out after ${timeoutMs}ms`));
+      }
     }, timeoutMs);
   });
   
-  return Promise.race([promise, timeoutPromise]).finally(() => {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  });
+  return Promise.race([
+    promise.then(
+      (val) => {
+        settled = true;
+        if (timer) clearTimeout(timer);
+        return val;
+      },
+      (err) => {
+        settled = true;
+        if (timer) clearTimeout(timer);
+        throw err;
+      }
+    ),
+    timeoutPromise
+  ]);
 }
 
 /**
@@ -57,11 +72,11 @@ export async function getYoutubeDirectAudioUrl(
   let resolvedUrl: string | null = null;
   const errors: Error[] = [];
 
-  // 2. Try youtubei.js (Primary) with a 3.5s timeout
+  // 2. Try youtubei.js (Primary) with a 10s timeout
   try {
     resolvedUrl = await withTimeout(
       YouTubeiClient.resolveStream(videoId),
-      3500,
+      10000,
       "youtubei.js"
     );
   } catch (err: any) {
