@@ -41,29 +41,43 @@ export class YouTubeiClient {
    * Fetches video details, selects the best audio format, and deciphers the stream URL.
    */
   static async resolveStream(videoId: string): Promise<string | null> {
-    try {
-      const yt = await this.getInstance();
-      AudioLogger.info("YouTube", `Fetching video info via youtubei.js for ${videoId}...`);
-      const info = await yt.getInfo(videoId);
-      
-      AudioLogger.info("YouTube", `Choosing best audio format for ${videoId}...`);
-      const format = info.chooseFormat({ type: "audio", quality: "best" });
-      
-      if (!format) {
-        AudioLogger.warn("YouTube", `No audio format found for ${videoId}`);
-        return null;
-      }
+    const clients = ["WEB", "ANDROID", "TV", "IOS", "MWEB"] as const;
+    let lastError: any = null;
 
-      AudioLogger.info("YouTube", `Deciphering audio stream URL for ${videoId}...`);
-      const url = await format.decipher(yt.session.player);
-      if (url) {
-        AudioLogger.info("YouTube", `Successfully resolved audio stream URL via youtubei.js for ${videoId}`);
-        return url;
+    for (const clientName of clients) {
+      try {
+        const yt = await this.getInstance();
+        AudioLogger.info("YouTube", `Fetching video info via youtubei.js for ${videoId} using client ${clientName}...`);
+        const info = await yt.getInfo(videoId, { client: clientName as any });
+        
+        AudioLogger.info("YouTube", `Client ${clientName} playabilityStatus: ${JSON.stringify(info.playability_status)}`);
+        AudioLogger.info("YouTube", `Client ${clientName} streamingData exists: ${!!info.streaming_data}`);
+
+        if (!info.streaming_data) {
+          AudioLogger.warn("YouTube", `Client ${clientName} returned no streamingData for ${videoId}`);
+          continue;
+        }
+
+        AudioLogger.info("YouTube", `Choosing best audio format for ${videoId}...`);
+        const format = info.chooseFormat({ type: "audio", quality: "best" });
+        
+        if (!format) {
+          AudioLogger.warn("YouTube", `No audio format found for ${videoId} using client ${clientName}`);
+          continue;
+        }
+
+        AudioLogger.info("YouTube", `Deciphering audio stream URL for ${videoId}...`);
+        const url = await format.decipher(yt.session.player);
+        if (url) {
+          AudioLogger.info("YouTube", `Successfully resolved audio stream URL via youtubei.js (${clientName}) for ${videoId}`);
+          return url;
+        }
+      } catch (err: any) {
+        AudioLogger.error("YouTube", `youtubei.js client ${clientName} failed for ${videoId}`, err);
+        lastError = err;
       }
-      return null;
-    } catch (err: any) {
-      AudioLogger.error("YouTube", `youtubei.js failed resolving ${videoId}`, err);
-      throw new YouTubeResolverError(`youtubei.js failed to resolve ${videoId}`, err);
     }
+
+    throw new YouTubeResolverError(`youtubei.js failed to resolve ${videoId} after trying all clients`, lastError);
   }
 }
