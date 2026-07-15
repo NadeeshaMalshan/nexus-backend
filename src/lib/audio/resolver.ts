@@ -1,5 +1,6 @@
 import { AudioCache } from "./cache";
 import { YouTubeiClient } from "./youtubei";
+import { resolveYtdlpStream } from "./ytdlp";
 import { resolveYtdlStream } from "./ytdl";
 import { resolvePipedStream } from "./piped";
 import { AudioLogger } from "./logger";
@@ -28,8 +29,9 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, name: stri
  * Uses a tiered strategy:
  * 1. Redis Cache lookup
  * 2. youtubei.js (primary stream resolver)
- * 3. @distube/ytdl-core (fallback stream resolver)
- * 4. Piped API instances (final fallback)
+ * 3. yt-dlp (secondary stream resolver)
+ * 4. @distube/ytdl-core (third stream resolver)
+ * 5. Piped API instances (final fallback)
  *
  * Expired URLs are automatically refreshed on cache misses.
  *
@@ -64,10 +66,24 @@ export async function getYoutubeDirectAudioUrl(
     );
   } catch (err: any) {
     errors.push(err);
-    AudioLogger.warn("YouTube", `youtubei.js resolver failed/timed out for ${videoId}. Trying fallback ytdl-core...`);
+    AudioLogger.warn("YouTube", `youtubei.js resolver failed/timed out for ${videoId}. Trying fallback yt-dlp...`);
   }
 
-  // 3. Try @distube/ytdl-core (Secondary fallback) with a 3.5s timeout
+  // 3. Try yt-dlp (Secondary fallback) with a 10s timeout
+  if (!resolvedUrl) {
+    try {
+      resolvedUrl = await withTimeout(
+        resolveYtdlpStream(videoId),
+        10000,
+        "yt-dlp"
+      );
+    } catch (err: any) {
+      errors.push(err);
+      AudioLogger.warn("yt-dlp", `yt-dlp resolver failed/timed out for ${videoId}. Trying fallback ytdl-core...`);
+    }
+  }
+
+  // 4. Try @distube/ytdl-core (Tertiary fallback) with a 3.5s timeout
   if (!resolvedUrl) {
     try {
       resolvedUrl = await withTimeout(
