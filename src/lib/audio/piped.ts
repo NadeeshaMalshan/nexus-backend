@@ -20,7 +20,14 @@ export async function resolvePipedStream(videoId: string): Promise<string | null
   }
 
   const bases = raw
-    ? [raw.replace(/\/+$/, "")]
+    ? [
+        raw.replace(/\/+$/, ""),
+        "https://pipedapi.projectsegfau.lt",
+        "https://pipedapi.swish.moe",
+        "https://pipedapi.sugoi.host",
+        "https://piped-api.kuoushi.com",
+        "https://pipedapi.kavin.rocks"
+      ]
     : [
         "https://pipedapi.projectsegfau.lt",
         "https://pipedapi.swish.moe",

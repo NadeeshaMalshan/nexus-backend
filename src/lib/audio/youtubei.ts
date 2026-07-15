@@ -1,6 +1,8 @@
 import { AudioLogger } from "./logger";
 import { YouTubeResolverError } from "./errors";
 
+const { loadYoutubei } = require("./youtubei-loader");
+
 export class YouTubeiClient {
   private static instance: any = null;
   private static initPromise: Promise<any> | null = null;
@@ -17,7 +19,7 @@ export class YouTubeiClient {
       AudioLogger.info("YouTube", "Initializing Innertube client singleton...");
       this.initPromise = (async () => {
         try {
-          const { Innertube, UniversalCache } = await (new Function('return import("youtubei.js")')() as Promise<any>);
+          const { Innertube, UniversalCache } = await loadYoutubei();
           const client = await Innertube.create({
             cache: new UniversalCache(false)
           });
