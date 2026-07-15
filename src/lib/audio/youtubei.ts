@@ -41,7 +41,7 @@ export class YouTubeiClient {
    * Fetches video details, selects the best audio format, and deciphers the stream URL.
    */
   static async resolveStream(videoId: string): Promise<string | null> {
-    const clients = ["WEB", "ANDROID", "TV", "IOS", "MWEB"] as const;
+    const clients = ["IOS", "TV", "ANDROID", "WEB", "MWEB"] as const;
     let lastError: any = null;
 
     for (const clientName of clients) {
