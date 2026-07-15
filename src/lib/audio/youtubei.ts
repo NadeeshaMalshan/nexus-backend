@@ -47,6 +47,7 @@ export class YouTubeiClient {
     for (const clientName of clients) {
       try {
         const yt = await this.getInstance();
+        AudioLogger.info("YouTube", `[Fallback Diagnostic] Selected client: ${clientName}. Session player exists: ${!!yt.session?.player}`);
         AudioLogger.info("YouTube", `Fetching video info via youtubei.js for ${videoId} using client ${clientName}...`);
         const info = await yt.getInfo(videoId, { client: clientName as any });
         
@@ -66,14 +67,18 @@ export class YouTubeiClient {
           continue;
         }
 
-        AudioLogger.info("YouTube", `Deciphering audio stream URL for ${videoId}...`);
+        AudioLogger.info("YouTube", `Format direct URL exists before decipher: ${!!format.url} (length: ${format.url ? format.url.length : 0})`);
+        AudioLogger.info("YouTube", `Deciphering audio stream URL for ${videoId} (calling decipher)...`);
+        
         const url = await format.decipher(yt.session.player);
+        AudioLogger.info("YouTube", `Deciphered URL result length: ${url ? url.length : 0}`);
+        
         if (url) {
           AudioLogger.info("YouTube", `Successfully resolved audio stream URL via youtubei.js (${clientName}) for ${videoId}`);
           return url;
         }
       } catch (err: any) {
-        AudioLogger.error("YouTube", `youtubei.js client ${clientName} failed for ${videoId}`, err);
+        AudioLogger.error("YouTube", `youtubei.js client ${clientName} failed for ${videoId} with exception: ${err?.stack || err?.message || err}`);
         lastError = err;
       }
     }
